@@ -4,6 +4,9 @@ from langserve import add_routes
 
 #from rag_google_cloud_sensitive_data_protection.chain import chain as rag_google_cloud_sensitive_data_protection_chain
 from rag_google_cloud_vertexai_search.chain import chain as rag_google_cloud_vertexai_search_chain
+from simplechat.chain import chain as simplechat_chain
+from simplechat.agentWikipedia import agentWikipedia as agent_Wikipedia
+
 
 app = FastAPI()
 
@@ -17,7 +20,10 @@ async def ping():
     return {"message": "pong"}
 
     
-add_routes(app, rag_google_cloud_vertexai_search_chain, path="/rag-google-cloud-vertexai-search")
+add_routes(app, rag_google_cloud_vertexai_search_chain, path="/chat")
+add_routes(app, simplechat_chain, path="/simplechat")
+add_routes(app, agent_Wikipedia, path="/wikipedia")
+
 
 #add_routes(app, rag_google_cloud_sensitive_data_protection_chain, path="/rag-google-cloud-sensitive-data-protection")
 
