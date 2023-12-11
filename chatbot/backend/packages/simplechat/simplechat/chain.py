@@ -35,33 +35,31 @@ retriever = GoogleVertexAISearchRetriever(
     engine_data_type=1, # structured data
 )
  
-def chat(query : str) :
-    try:
 
-        # RAG prompt
-        template = """Answer the question based only on the following context:
-        {context}
-        Question: {question}
-        """
-        prompt = ChatPromptTemplate.from_template(template)
+try:
 
-        # RAG
-        chain = (
-            RunnableParallel({"context": retriever, "question": RunnablePassthrough()})
-            | prompt
-            | model
-            | StrOutputParser()
-        )
+    # RAG prompt
+    template = """Answer the question based only on the following context:
+    {context}
+    Question: {question}
+    """
+    prompt = ChatPromptTemplate.from_template(template)
 
-
-        # Add typing for input
-        class Question(BaseModel):
-            __root__: str
+    # RAG
+    chain = (
+        RunnableParallel({"context": retriever, "question": RunnablePassthrough()})
+        | prompt
+        | model
+        | StrOutputParser()
+    )
 
 
-        chain = chain.with_types(input_type=Question)
-        return chain.invoke(query)
+    # Add typing for input
+    class Question(BaseModel):
+        __root__: str
 
-    except Exception as err:
-        print(f"Unexpected ERROR {err=}, {type(err)=}")    
-        return f"error: {e}"
+
+    chain = chain.with_types(input_type=Question)
+
+except Exception as err:
+    print(f"Unexpected ERROR {err}, {type(err)}")    
