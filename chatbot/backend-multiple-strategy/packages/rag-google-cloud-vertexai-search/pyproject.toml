@@ -1,7 +1,7 @@
 [tool.poetry]
-name = "simplechat"
+name = "rag-google-cloud-vertexai-search"
 version = "0.0.1"
-description = "Simple chat"
+description = "RAG using Google Vertex AI Search"
 authors = ["Juan Calvo <juan.calvo@datatonic.com>"]
 readme = "README.md"
 
@@ -24,7 +24,7 @@ export_attr = "chain"
 [tool.templates-hub]
 use-case = "rag"
 author = "Datatonic"
-integrations = [ "Google"]
+integrations = ["OpenAI", "Google"]
 tags = ["vectordbs"]
 
 [build-system]

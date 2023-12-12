@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "chat-bot-langchain"
-version = "0.1.1"
+version = "0.1.2"
 description = "Simple chat bot to demonstrate Google cloud capabilities"
 authors = ["Julien MIQUEL <julienmiquel@google.com>"]
 readme = "README.md"
@@ -13,10 +13,7 @@ python = "^3.10"
 uvicorn = "^0.23.2"
 langserve = {extras = ["server"], version = ">=0.0.30"}
 pydantic = "<2"
-rag-google-cloud-sensitive-data-protection = {path = "packages/rag-google-cloud-sensitive-data-protection", develop = true}
 rag-google-cloud-vertexai-search = {path = "packages/rag-google-cloud-vertexai-search", develop = true}
-simplechat = {path = "packages/simplechat", develop = true}
-
 
 [tool.poetry.group.dev.dependencies]
 langchain-cli = ">=0.0.15"

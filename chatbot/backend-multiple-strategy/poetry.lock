@@ -1667,6 +1667,24 @@ files = [
 ]
 
 [[package]]
+name = "rag-google-cloud-sensitive-data-protection"
+version = "0.0.1"
+description = "RAG using sensitive data protection"
+optional = false
+python-versions = ">=3.8.1,<4.0"
+files = []
+develop = true
+
+[package.dependencies]
+google-cloud-aiplatform = ">=1.35.0"
+google-cloud-dlp = "^3.13.0"
+langchain = ">=0.0.333"
+
+[package.source]
+type = "directory"
+url = "packages/rag-google-cloud-sensitive-data-protection"
+
+[[package]]
 name = "rag-google-cloud-vertexai-search"
 version = "0.0.1"
 description = "RAG using Google Vertex AI Search"
@@ -1821,6 +1839,23 @@ files = [
     {file = "shellingham-1.5.4.tar.gz", hash = "sha256:8dbca0739d487e5bd35ab3ca4b36e11c4078f3a234bfce294b0a0291363404de"},
 ]
 
+[[package]]
+name = "simplechat"
+version = "0.0.1"
+description = "Simple chat"
+optional = false
+python-versions = ">=3.8.1,<4.0"
+files = []
+develop = true
+
+[package.dependencies]
+google-cloud-aiplatform = ">=1.35.0"
+google-cloud-discoveryengine = "^0.11.3"
+langchain = ">=0.0.333"
+
+[package.source]
+type = "directory"
+url = "packages/simplechat"
 
 [[package]]
 name = "six"
