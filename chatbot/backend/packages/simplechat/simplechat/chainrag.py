@@ -1,34 +1,14 @@
 
 import os
+# LangChain
+import langchain
+print(f"LangChain version: {langchain.__version__}")
 
 from langchain.chat_models import ChatVertexAI
 from langchain.prompts import ChatPromptTemplate
 from langchain.pydantic_v1 import BaseModel
-from langchain.retrievers import GoogleVertexAISearchRetriever
 from langchain.schema.output_parser import StrOutputParser
 from langchain.schema.runnable import RunnableParallel, RunnablePassthrough
-
-import json
-import textwrap
-
-# Utils
-import time
-import uuid
-from typing import List
-
-import numpy as np
-import vertexai
-
-# Vertex AI
-from google.cloud import aiplatform
-
-print(f"Vertex AI SDK version: {aiplatform.__version__}")
-
-# LangChain
-import langchain
-
-print(f"LangChain version: {langchain.__version__}")
-
 from langchain.chains import RetrievalQA
 from langchain.document_loaders import GCSDirectoryLoader
 from langchain.embeddings import VertexAIEmbeddings
@@ -45,37 +25,49 @@ from langchain.retrievers import (
 )
 from langchain.agents.agent_toolkits import create_retriever_tool
 
+import json
+import textwrap
+
+# Utils
+import time
+import uuid
+from typing import List
+
+import numpy as np
+
+# Vertex AI
+from google.cloud import aiplatform
+import vertexai
+
+print(f"Vertex AI SDK version: {aiplatform.__version__}")
+
+
 
 
 # Get project, data store, and model type from env variables
-# project_id = os.environ.get("GOOGLE_CLOUD_PROJECT_ID")
-# data_store_id = os.environ.get("DATA_STORE_ID")
-# model_type = os.environ.get("MODEL_TYPE")
+PROJECT_ID = os.environ.get("GCP_PROJECT_ID")
+REGION =  os.environ.get("GCP_REGION")
 
-TEXT_MODEL_VERSION =     "text-bison@002"
+DATA_STORE_ID = os.environ.get("DATA_STORE_ID")
+DATA_STORE_LOCATION_ID = os.environ.get("DATA_STORE_LOCATION_ID")
 
-PROJECT_ID = "ml-demo-384110"  # @param {type:"string"}
-REGION = "europe-west1"  # @param {type:"string"}
-DATA_STORE_LOCATION_ID = "global"  # Set to your data store location
-data_store_id = "bq-gsoi-articles-rugby-deb_1701080507649"  # Set to your data store ID
-model_type = "chat-bison"
-
-DATA_STORE_LOCATION_ID = "global"  # Set to your data store location
-DATA_STORE_ID = "bq-gsoi-articles-rugby-deb_1701080507649"  # Set to your data store ID
+LLM_CHAT_MODEL_VERSION = os.environ.get("LLM_CHAT_MODEL_VERSION")
+LLM_TEXT_MODEL_VERSION = os.environ.get("LLM_TEXT_MODEL_VERSION")
 
 
-if not data_store_id:
+
+if not DATA_STORE_ID:
     raise ValueError(
         "No value provided in env variable 'DATA_STORE_ID'. "
         "A  data store is required to run this application."
     )
 # Set LLM and embeddings
-model = ChatVertexAI(model_name=model_type, temperature=0.0)
+model = ChatVertexAI(model_name=LLM_CHAT_MODEL_VERSION, temperature=0.0)
 
 # Create Vertex AI retriever
 retriever = GoogleVertexAISearchRetriever(
     project_id=PROJECT_ID, 
-    search_engine_id=data_store_id, 
+    search_engine_id=DATA_STORE_ID, 
     max_documents=10,
     engine_data_type=1, # structured data
 )
@@ -122,7 +114,7 @@ class CustomVertexAIEmbeddings(VertexAIEmbeddings, BaseModel):
 
 # Text model instance integrated with langChain
 llm = VertexAI(
-    model_name=TEXT_MODEL_VERSION,
+    model_name=LLM_TEXT_MODEL_VERSION,
     max_output_tokens=1024,
     temperature=0.2,
     top_p=1.0,

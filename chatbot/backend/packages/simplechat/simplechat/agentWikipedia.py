@@ -16,10 +16,16 @@ from langchain.utilities import WikipediaAPIWrapper
 import wikipedia
 import vertexai
 
-project_id = "ml-demo-384110"  # @param {type:"string"}
-REGION = "europe-west1"  # @param {type:"string"}
+# Get project, data store, and model type from env variables
+PROJECT_ID = os.environ.get("GCP_PROJECT_ID")
+REGION =  os.environ.get("GCP_REGION")
 
-TEXT_MODEL_VERSION =     "text-bison@001"
+DATA_STORE_ID = os.environ.get("DATA_STORE_ID")
+DATA_STORE_LOCATION_ID =  os.environ.get("DATA_STORE_LOCATION_ID")
+
+LLM_CHAT_MODEL_VERSION = os.environ.get("LLM_CHAT_MODEL_VERSION")
+LLM_TEXT_MODEL_VERSION = os.environ.get("LLM_TEXT_MODEL_VERSION")
+
 
 
 from langchain.tools import tool
@@ -120,7 +126,7 @@ def _handle_error(error: ToolException) -> str:
 
 # Text model instance integrated with langChain
 llm = VertexAI(
-    model_name=TEXT_MODEL_VERSION,
+    model_name=LLM_TEXT_MODEL_VERSION,
     max_output_tokens=1024,
     temperature=0.2,
     top_p=1.0,
@@ -130,7 +136,7 @@ llm = VertexAI(
 
 # Text model instance integrated with langChain
 llmTools = VertexAI(
-    model_name=TEXT_MODEL_VERSION,
+    model_name=LLM_TEXT_MODEL_VERSION,
     max_output_tokens=1024,
     temperature=0.1,
     top_p=1.0,
@@ -159,6 +165,6 @@ agentWikipedia = initialize_agent(
 
 
 #agentWikipedia.run("What's today's date?")
-agentWikipedia.run("What are most important today news ? ",callbacks=[AgentCallbackHandler()])
+#agentWikipedia.run("What are most important today news ? ",callbacks=[AgentCallbackHandler()])
 
 
