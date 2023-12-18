@@ -42,13 +42,15 @@ retriever = GoogleVertexAISearchRetriever(
     data_store_id=DATA_STORE_ID, 
     location_id = DATA_STORE_LOCATION_ID,
     max_documents=DATA_STORE_MAX_DOC,
-    engine_data_type=1, # structured data
+    engine_data_type=1, # structured data, 
+    get_extractive_answers = True
 )
 
 # RAG prompt
-template = """Answer the question based only on the following context with the urls of sources:
+template = """Answer the question in French based only on the following context with the urls of sources:
 {context}
 Question: {question}
+Answer: 
 """
 prompt = ChatPromptTemplate.from_template(template )
 
