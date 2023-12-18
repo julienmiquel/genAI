@@ -8,14 +8,15 @@ from langchain.schema.output_parser import StrOutputParser
 from langchain.schema.runnable import RunnableParallel, RunnablePassthrough
 
 # Get project, data store, and model type from env variables
-PROJECT_ID = os.environ.get("GCP_PROJECT_ID")
-REGION =  os.environ.get("GCP_REGION")
+PROJECT_ID  = os.environ.get("GCP_PROJECT_ID")
+REGION      =  os.environ.get("GCP_REGION")
 
-DATA_STORE_ID = os.environ.get("DATA_STORE_ID")
-DATA_STORE_LOCATION_ID =  os.environ.get("DATA_STORE_LOCATION_ID")
+DATA_STORE_ID           = os.environ.get("DATA_STORE_ID")
+DATA_STORE_LOCATION_ID  =  os.environ.get("DATA_STORE_LOCATION_ID")
+DATA_STORE_MAX_DOC = os.environ.get("DATA_STORE_MAX_DOC", 3)
 
-LLM_CHAT_MODEL_VERSION = os.environ.get("LLM_CHAT_MODEL_VERSION")
-LLM_TEXT_MODEL_VERSION = os.environ.get("LLM_TEXT_MODEL_VERSION")
+LLM_CHAT_MODEL_VERSION  = os.environ.get("LLM_CHAT_MODEL_VERSION")
+LLM_TEXT_MODEL_VERSION  = os.environ.get("LLM_TEXT_MODEL_VERSION")
 
 
 if not DATA_STORE_ID:
@@ -25,30 +26,38 @@ if not DATA_STORE_ID:
     )
 
 # Set LLM and embeddings
-model = ChatVertexAI(model_name=LLM_CHAT_MODEL_VERSION, temperature=0.0)
+model = ChatVertexAI(model_name=LLM_CHAT_MODEL_VERSION, 
+                     temperature=0.1, 
+                     top_k=30, 
+                     top_p=0.85, 
+                     max_tokens=1024,
+                     max_output_tokens=1024, 
+                     verbose=True, 
+                     location=REGION, 
+                     project=PROJECT_ID)
 
 # Create Vertex AI retriever
 retriever = GoogleVertexAISearchRetriever(
     project_id=PROJECT_ID, 
     data_store_id=DATA_STORE_ID, 
     location_id = DATA_STORE_LOCATION_ID,
-    max_documents=10,
+    max_documents=DATA_STORE_MAX_DOC,
     engine_data_type=1, # structured data
 )
 
 # RAG prompt
-template = """Answer the question based only on the following context:
+template = """Answer the question based only on the following context with the urls of sources:
 {context}
 Question: {question}
 """
-prompt = ChatPromptTemplate.from_template(template)
+prompt = ChatPromptTemplate.from_template(template )
 
 # RAG
 chain = (
     RunnableParallel({"context": retriever, "question": RunnablePassthrough()})
     | prompt
     | model
-    | StrOutputParser()
+    | StrOutputParser() 
 )
 
 
