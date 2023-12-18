@@ -31,6 +31,7 @@ model = ChatVertexAI(model_name=LLM_CHAT_MODEL_VERSION, temperature=0.0)
 retriever = GoogleVertexAISearchRetriever(
     project_id=PROJECT_ID, 
     search_engine_id=DATA_STORE_ID, 
+    location_id = DATA_STORE_LOCATION_ID,
     max_documents=10,
     engine_data_type=1, # structured data
 )
