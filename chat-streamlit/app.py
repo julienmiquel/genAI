@@ -62,7 +62,7 @@ class CustomVertexAIEmbeddings(VertexAIEmbeddings, BaseModel):
 
 # LLM model
 llm = VertexAI(
-    model_name="text-bison@001",
+    model_name="text-bison@002",
     max_output_tokens=256,
     temperature=0.1,
     top_p=0.8,

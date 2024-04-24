@@ -5,11 +5,18 @@ chatbot/backend/packages/simplechat/simplechat/.ipynb_checkpoints/agentWikipedia
 chatbot/backend/packages/simplechat/simplechat/.ipynb_checkpoints/chain-checkpoint.py
 chatbot/backend/packages/simplechat/simplechat/.ipynb_checkpoints/chainrag-checkpoint.py
 chatbot/backend/packages/rag-google-cloud-vertexai-search/rag_google_cloud_vertexai_search/.ipynb_checkpoints/__init__-checkpoint.py
-lib64/**/__pycache__/
-lib/**/__pycache__/
+lib64/**/__pycache__/*
+lib/**/__pycache__/*
 *.py[cod]
 .ipynb_checkpoints/
 **/.ipynb_checkpoints/
 .DS_Store
 **/.DS_Store
 
+nodejs/yarn.lock
+nodejs/** 
+chatbot/backend/app/__pycache__/*
+chatbot/backend/app/__pycache__/__init__.cpython-310.pyc
+chatbot/backend/app/__pycache__/__init__.cpython-310.pyc
+chatbot/backend/packages/rag-google-cloud-vertexai-search/rag_google_cloud_vertexai_search/__pycache__/__init__.cpython-310.pyc
+chatbot/backend/packages/rag-google-cloud-vertexai-search/rag_google_cloud_vertexai_search/__pycache__/chain.cpython-310.pyc

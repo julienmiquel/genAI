@@ -35,22 +35,27 @@ os.environ["MODEL"] = LLM_TEXT_MODEL_VERSION
 
 llm = VertexAI(model_name=LLM_TEXT_MODEL_VERSION)
 
-
+print(f"DATA_STORE_ID = {DATA_STORE_ID}")
 # Create Vertex AI retriever
-retriever = GoogleVertexAISearchRetriever(
-    project_id=PROJECT_ID, 
-    data_store_id=DATA_STORE_ID, 
-    location_id = DATA_STORE_LOCATION_ID,
-    max_documents=DATA_STORE_MAX_DOC,
-    engine_data_type=1, # structured data, 
-    get_extractive_answers = True
-)
+from .retriever import get_retriever
+# Create Vertex AI retriever
+retriever = get_retriever()
 
-retrieval_qa = RetrievalQA.from_chain_type(
+
+###################################
+from langchain.chains import RetrievalQAWithSourcesChain
+
+
+retrieval_qa = RetrievalQAWithSourcesChain.from_chain_type(
     llm=llm, chain_type="stuff", retriever=retriever, return_source_documents=True
 )
-
 #retrieval_qa_with_sources({"question": search_query}, return_only_outputs=True)
+
+
+
+###################################
+
+
 
 from langchain.chains import ConversationalRetrievalChain
 from langchain.memory import ConversationBufferMemory
@@ -63,7 +68,8 @@ conversational_retrieval = ConversationalRetrievalChain.from_llm(
 from langchain.prompts import PromptTemplate
 
 prompt_template = """Use the context to answer the question at the end.
-You must always use the context and context only to answer the question. Never try to make up an answer. If the context is empty or you do not know the answer, just say "Je suis désolé, je ne connais pas cette information.".
+You must always use the context and context only to answer the question. Never try to make up an answer. 
+If the context is empty or you do not know the answer, just say "Je suis désolé, je ne connais pas cette information.".
 The answer is always few sentences long and in French.
 
 Context: {context}
@@ -78,6 +84,7 @@ qa_chain = RetrievalQA.from_llm(
     llm=llm, prompt=prompt, retriever=retriever, return_source_documents=True
 )
 
+###################################
 #-------------
 
 
@@ -85,6 +92,10 @@ qa_chain = RetrievalQA.from_llm(
 class Question(BaseModel):
     __root__: str
 
+###################################
 retrieval_qa = retrieval_qa.with_types(input_type=Question)
 qa_chain = qa_chain.with_types(input_type=Question)
 conversational_retrieval= conversational_retrieval.with_types(input_type=Question)
+
+print(conversational_retrieval.invoke("Que font les femmes de la maison d’arrêt d’Angoulême ?"))
+###################################

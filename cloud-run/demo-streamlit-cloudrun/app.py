@@ -1,5 +1,15 @@
-import os
+import random
+import time
 import streamlit as st
+from vertexai.vision_models import ImageTextModel
+
+from vertexai.preview.generative_models import (
+    GenerationConfig,
+    GenerativeModel,
+    Image,
+    Part,
+)
+import vertexai
 from vertexai.preview.generative_models import (
     GenerationConfig,
     GenerativeModel,
@@ -7,19 +17,54 @@ from vertexai.preview.generative_models import (
     HarmBlockThreshold,
     Part,
 )
-import vertexai
+from vertexai.preview.vision_models import (
+    Image, 
+    ImageGenerationModel
+)
 
-PROJECT_ID = os.environ.get("GCP_PROJECT")  # Your Google Cloud Project ID
-LOCATION = os.environ.get("GCP_REGION")  # Your Google Cloud Project Region
-vertexai.init(project=PROJECT_ID, location=LOCATION)
+import gcs as gcs
+import config as config
 
+vertexai.init(project=config.PROJECT_ID, location=config.REGION)
+
+st.set_page_config(layout="wide")
+
+chatbot = False
 
 @st.cache_resource
 def load_models():
-    text_model_pro = GenerativeModel("gemini-pro")
-    multimodal_model_pro = GenerativeModel("gemini-pro-vision")
-    return text_model_pro, multimodal_model_pro
+    try:
+        text_model_pro = GenerativeModel("gemini-pro")
+    except:
+        print("ERROR  GenerativeModel(gemini-pro)")
+        text_model_pro = None
 
+    try:
+        multimodal_model_pro = GenerativeModel("gemini-pro-vision")
+    except:
+        print("ERROR      GenerativeModel(gemini-pro-vision)")
+        multimodal_model_pro = None
+    try:
+        image_model = ImageGenerationModel.from_pretrained("imagegeneration@005")
+    except:
+        print("ERROR     ImageGenerationModel.from_pretrained(imagegeneration@005)")
+        image_model = None
+
+    try:
+        
+        image2text_model = ImageTextModel.from_pretrained("imagetext@001")
+    except:
+        print("ERROR     ImageTextModel.from_pretrained(imagetext@001)")
+        image2text_model = None
+
+    return text_model_pro, multimodal_model_pro, image_model, image2text_model
+
+
+@st.cache_data(persist=True)
+def cache_data():
+    from data import Story
+    story = Story()
+    return story
 
 def get_gemini_pro_text_response(
     model: GenerativeModel,
@@ -52,6 +97,36 @@ def get_gemini_pro_text_response(
             continue
     return " ".join(final_response)
 
+def get_gemini_pro_text_response_prompt(
+    model: GenerativeModel,
+    prompt: str,
+    generation_config: GenerationConfig,
+    stream: bool = True,
+):
+    safety_settings = {
+        HarmCategory.HARM_CATEGORY_HARASSMENT: HarmBlockThreshold.BLOCK_NONE,
+        HarmCategory.HARM_CATEGORY_HATE_SPEECH: HarmBlockThreshold.BLOCK_NONE,
+        HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT: HarmBlockThreshold.BLOCK_NONE,
+        HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT: HarmBlockThreshold.BLOCK_NONE,
+    }
+
+    responses = model.generate_content(
+        prompt,
+        generation_config=generation_config,
+        safety_settings=safety_settings,
+        stream=stream,
+    )
+
+    final_response = []
+    for response in responses:
+        try:
+            # st.write(response.text)
+            final_response.append(response.text)
+        except IndexError:
+            # st.write(response)
+            final_response.append("")
+            continue
+    return " ".join(final_response)
 
 def get_gemini_pro_vision_response(
     model, prompt_list, generation_config={}, stream: bool = True
@@ -68,22 +143,66 @@ def get_gemini_pro_vision_response(
             pass
     return "".join(final_response)
 
+def get_image_2_text_response(
+    model, source_bytes, language="en"
+):
+    from PIL import Image as PIL_image
+    from vertexai.vision_models import Image
 
-st.header("Vertex AI Gemini API", divider="rainbow")
-text_model_pro, multimodal_model_pro = load_models()
+    source_image = Image(source_bytes)
+    captions = model.get_captions(
+        image=source_image,
+        # Optional:
+        number_of_results=2,
+        language=language,
+    )
+    return captions
 
-tab1, tab2, tab3, tab4 = st.tabs(
-    ["Generate story", "Marketing campaign", "Image Playground", "Video Playground"]
+
+import data as data
+
+print("init page")
+
+st.header("Vertex AI Demo", divider="rainbow",)
+text_model_pro, multimodal_model_pro, image_model, image2text_model = load_models()
+
+story_data = cache_data()
+
+tab3, tab6, tab5, tab1, tab2,  tab4,  = st.tabs(
+    ["Image Playground","Audio & video", "Real-estate", "Generate story", "Marketing campaign",  "Video Playground", ]
 )
+
+
+@st.cache_data(persist=True)
+def loadData():
+    character_name_value = st.session_state.get("character_name", "Mittens")
+    # character_type_value = st.session_state.get("character_type", "Cat")
+    # character_persona_value = st.session_state.get("character_persona", "Mitten is a very friendly cat.")
+    # character_location_value = st.session_state.get("character_location", "Andromeda Galaxy")
+    # story_premise_value = st.session_state.get("story_premise", ["Love", "Adventure"])
+    return character_name_value #, character_type_value, character_persona_value, character_location_value, story_premise_value
+
+def saveData(character_name_value#, character_type_value,character_persona_value,character_location_value,story_premise_value,story_premise_value
+             ):
+        st.session_state["character_name_value"] = character_name_value
+        print("SaveData : "+character_name_value)
+
+def submit():
+    st.session_state["character_name"] = character_name
+    print("Save : "+st.session_state["character_name"])
 
 with tab1:
     st.write("Using Gemini Pro - Text only model")
     st.subheader("Generate a story")
 
+    character_name_value = loadData()#, character_type_value, character_persona_value, character_location_value, story_premise_value 
+    
+    
     # Story premise
     character_name = st.text_input(
-        "Enter character name: \n\n", key="character_name", value="Mittens"
+        "Enter character name: \n\n", key="character_name", value=character_name_value#, on_change=submit
     )
+    saveData(character_name_value)
     character_type = st.text_input(
         "What type of character is it? \n\n", key="character_type", value="Cat"
     )
@@ -149,28 +268,96 @@ with tab1:
     #     max_output_tokens=max_output_tokens,
     # )
 
-    config = {
+    config_llm = {
         "temperature": 0.8,
         "max_output_tokens": 2048,
     }
+
+    image_prompt = f"""Generate a character based on following parameters: character_name: {character_name} \n
+        character_type: {character_type} \n
+        character_persona: {character_persona} \n
+        character_location: {character_location} \n
+        story_premise: {",".join(story_premise)} \n"""
+
 
     generate_t2t = st.button("Generate my story", key="generate_t2t")
     if generate_t2t and prompt:
         # st.write(prompt)
         with st.spinner("Generating your story using Gemini..."):
-            first_tab1, first_tab2 = st.tabs(["Story", "Prompt"])
+            first_tab1, first_tab2 = st.tabs(["Story", "Prompt" ])
             with first_tab1:
+                
                 response = get_gemini_pro_text_response(
                     text_model_pro,
                     prompt,
-                    generation_config=config,
+                    generation_config=config_llm,
                 )
                 if response:
                     st.write("Your story:")
                     st.write(response)
+                    story_data.story = response
+
             with first_tab2:
                 st.text(prompt)
+         
 
+    generate_t2i = st.button("Generate an illustrative image of the main character", key="generate_t2ti")
+    if generate_t2i and image_prompt and story_data.story:
+        
+        with st.spinner("Generating your storyboard using imagen..."):
+            st.write("Your story:")
+            st.write(story_data.story)
+
+            first_img_tab1, first_img_tab2 = st.tabs(["Image", "Prompt"])
+            with first_img_tab1:
+                import text2img as text2img
+                images, generate_response = text2img.imagen_generate(image_prompt, image_model )
+                
+                if images:
+                    st.write("Your storyboard:")
+                    for image in images:
+                        from PIL import Image as PIL_image
+
+                        st.image(image, width=350, caption=f"Your generated character named {character_name}")
+                        story_data.image_character = image
+                        st.write(image)
+            with first_img_tab2:
+                st.text(image_prompt)
+
+    generate_t3i = st.button("Generate my storyboard based on character and story", key="generate_t3i")
+    if generate_t3i and story_data.story:
+
+        story_parts = story_data.story.split("**")                
+        with st.spinner("Generating your storyboard using imagen..."):
+            st.write("Your story:")
+            for story_part in story_parts:
+                st.write(story_part)
+
+                par_image_prompt = f"""Generate an ilustrative scene based on the context below of the character based on following parameters: 
+                character_name: {character_name} \n
+    character_type: {character_type} \n
+    character_persona: {character_persona} \n
+    character_location: {character_location} \n
+    story_premise: {",".join(story_premise)} \n
+    story_scene: {",".join(story_part)} \n
+    """
+
+                first_img_tab1, first_img_tab2 = st.tabs(["Image", "Prompt"])
+                with first_img_tab1:
+                    import text2img as text2img
+                    images, generate_response = text2img.imagen_generate(image_prompt, image_model )
+                    
+                    if images:
+                        #st.write("Your storyboard:")
+                        for image in images:
+                            from PIL import Image as PIL_image
+
+                            st.image(image, width=350, caption=f"Your generated character named {character_name}")
+                            story_data.image_character = image
+                            st.write(image)
+
+
+                
 with tab2:
     st.write("Using Gemini Pro - Text only model")
     st.subheader("Generate your marketing campaign")
@@ -276,17 +463,150 @@ with tab2:
             with second_tab2:
                 st.text(prompt)
 
+
+    
+
 with tab3:
     st.write("Using Gemini Pro Vision - Multimodal model")
-    image_undst, screens_undst, diagrams_undst, recommendations, sim_diff = st.tabs(
+    tab_image, tab_image_to_text, tab_image_to_text_to_image, image_undst, screens_undst, diagrams_undst, recommendations, sim_diff = st.tabs(
         [
+            "Using Imagen - Text 2 image" , "Using Imagen - image 2 text", "Using Imagen - image 2 text 2 image :-)", 
             "Furniture recommendation",
             "Oven instructions",
             "ER diagrams",
             "Glasses recommendation",
             "Math reasoning",
+            
         ]
     )
+
+    with tab_image:
+        st.write("Using Imagen - Text 2 image")
+        st.subheader("Generate image")
+
+        image_prompt = "A real-estate luxury living room"
+        image_prompt = st.text_area('Enter your text here...', image_prompt, )
+
+        generate_t2imagen = st.button("Generate an image", key="generate_t2imagen")
+        if generate_t2imagen and image_prompt:
+            
+            with st.spinner("Generating an image using imagen..."):
+                
+                first_img_tab1, first_img_tab2 = st.tabs(["Image", "Prompt"])
+                with first_img_tab1:
+                    import text2img as text2img
+                    images, generate_response = text2img.imagen_generate(image_prompt, image_model )
+                    
+                    if images:
+                        for image in images:
+                            st.image(image, width=350, caption=f"Your generated image")                       
+                    else:
+                        st.text("Error when generate image")
+                        st.text(generate_response)    
+                with first_img_tab2:
+                    st.text(image_prompt)
+
+
+    with tab_image_to_text:
+        st.write("Using Imagen - image 2 text")
+        st.subheader("image decription")
+
+        image_2_describe_to_image = None
+        uploaded_image2t2i_file = st.file_uploader("Choose an image file", type= ["jpg", "jpeg"])
+
+        if uploaded_image2t2i_file is not None:
+            # To read file as bytes:
+            bytes_data = uploaded_image2t2i_file.getvalue()
+            st.image(bytes_data, caption='Uploaded image')
+            from PIL import Image as PIL_image
+            #image_2_describe = PIL_image.Image.frombytes(bytes_data)
+            #image_2_describe = Image.from_bytes(bytes_data)
+            print("######################################")
+            #print(image_2_describe) # = "image/jpeg"
+            captions =  get_image_2_text_response(model=image2text_model, source_bytes=bytes_data)
+            st.write("Caption from imagen:")
+            st.write(captions)
+
+            prompt = "Create a detailed prompt from the image"
+
+            image_part = Part.from_data(bytes_data, mime_type="image/jpeg")
+            response_gemini = get_gemini_pro_vision_response(
+                model=multimodal_model_pro, prompt_list=[image_part, prompt]
+            )
+            st.write("Caption from gemini:")
+            st.markdown(response_gemini)
+
+
+
+        # describe_i2timagen = st.button("Describe an image", key="describe_i2timagen")
+        # if describe_i2timagen and image_2_describe: # and image_prompt:
+            
+        #     with st.spinner("Generating a description of an image using imagen..."):
+                
+        #         first_img_tab1, first_img_tab2 = st.tabs(["Image", "Prompt"])
+        #         with first_img_tab1:
+        #             import text2img as text2img
+        #             images, generate_response = text2img.imagen_generate(image_prompt, image_model )
+                    
+        #             if images:
+        #                 for image in images:
+        #                     st.image(image, width=350, caption=f"Your generated image")                       
+        #             else:
+        #                 st.text("Error when generate image")
+        #                 st.text(generate_response)    
+        #         with first_img_tab2:
+        #             st.text(image_prompt)
+    with tab_image_to_text_to_image:
+        st.write("Using Imagen - image 2 text 2 image :-)")
+        st.subheader("image description and generation")
+
+        image_2_describe = None
+        uploaded_image_to_text_to_image_file = st.file_uploader("Choose an image file", 
+                                                                type= ["jpg", "jpeg"], 
+                                                                key="uploaded_image_to_text_to_image_file")
+
+        if uploaded_image_to_text_to_image_file is not None:
+            # To read file as bytes:
+            bytes_data = uploaded_image_to_text_to_image_file.getvalue()
+            st.image(bytes_data, caption='Uploaded image')
+            from PIL import Image as PIL_image
+            #image_2_describe = PIL_image.Image.frombytes(bytes_data)
+            #image_2_describe = Image.from_bytes(bytes_data)
+            print("######################################")
+            #print(image_2_describe) # = "image/jpeg"
+            captions =  get_image_2_text_response(model=image2text_model, source_bytes=bytes_data)
+            st.write("Caption from imagen:")            
+            st.write(captions)
+
+            image_part = Part.from_data(bytes_data, mime_type="image/jpeg")
+            prompt = "Create a detailed prompt from the image"
+
+            response_gemini = get_gemini_pro_vision_response(
+                model=multimodal_model_pro, prompt_list=[image_part, prompt]
+            )
+            st.write("Caption from gemini:")
+            st.markdown(response_gemini)
+
+            image_prompt =  response_gemini + ", ".join(captions) 
+            st.write(image_prompt)
+
+            with st.spinner("Generating an image using imagen..."):
+                
+                first_img_tab1, first_img_tab2 = st.tabs(["Image", "Prompt"])
+                with first_img_tab1:
+                    import text2img as text2img
+                    images, generate_response = text2img.imagen_generate(image_prompt, image_model )
+                    
+                    if images:
+                        for image in images:
+                            st.image(image, width=350, caption=f"Your generated image")                       
+                    else:
+                        st.text("Error when generate image")
+                        st.text(generate_response)
+                        
+                with first_img_tab2:
+                    st.text(image_prompt)
+
 
     with image_undst:
         st.markdown(
@@ -714,3 +1034,286 @@ Provide the answer in table format.
             with tab2:
                 st.write("Prompt used:")
                 st.write(prompt, "\n", "{video_data}")
+
+
+with tab5:
+    st.write("Using Gemini Pro Vision - Real-Estate")
+
+
+    re_windows, re_chatbot  = st.tabs(
+        ["Real-Estate Windows identification" , "Chat bot"]
+    )
+
+    with re_chatbot:
+        st.markdown(
+            """Votre assistant de l'immobilier"""
+        )
+        chatbot = True
+        web_input = st.text_input("URL", key="web_input", value="https://www.orpi.com/annonce-vente-appartement-t3-capbreton-40130-711-044059-848/?agency=monemartinaudcapbreton"
+    )
+
+    with re_windows:
+        st.markdown(
+            """Gemini can also provide usefull information to identify the real-estate windows:"""
+        )
+
+        image_uri = "https://soglass.fr/1424-large_default/double-vitrage-sur-mesure.jpg"
+
+        # room_image_uri = (
+        #     "gs://github-repo/img/gemini/retail-recommendations/rooms/living_room.jpeg"
+        # )
+        st.image(image_uri, width=350, caption="Fenetre à double vitrage")
+
+
+        from vertexai.preview.generative_models import (
+            GenerationConfig,
+            GenerativeModel,
+            Image,
+            Part,
+        )
+
+        image = Part.from_uri(room_image_uri, mime_type="image/jpeg")
+
+        uploaded_file = st.file_uploader("Choose a file", key="uploaded_file")
+        if uploaded_file is not None:
+            # To read file as bytes:
+            bytes_data = uploaded_file.getvalue()
+#            st.write(bytes_data)
+            st.image(bytes_data, caption='Uploaded image')
+            from PIL import Image as PIL_image
+
+            image = Image.from_bytes(bytes_data)
+            print("######################################")
+            print(image._pil_image) # = "image/jpeg"
+
+ 
+        st.write(
+            "Our expectation: Classify type of windows"
+        )
+
+        instructions = "Instructions: Consider the following image that contains windows:"
+        instructions= st.text_input("Instructions", value=instructions, )
+
+        prompt = """Windows thermal classification based on image provided.
+Answer in JSON format with keys  type, thermal isolation reason, confidence, level of thermal isolation.
+Classify the windows based on his type (simple, double, triple).
+Explain the reason of the classification.
+Explain the reason of the type of material.
+Provide confidence level.
+
+JSON:"""
+        prompt = st.text_area('Enter your text here...', prompt, )
+
+ 
+        tab1, tab2 = st.tabs( ["Response", "Prompt"])
+        generate_re_image_description = st.button(
+            "Generate recommendation....", key="generate_re_image_description"
+        )
+        contents = []
+        with tab1:
+
+            if generate_re_image_description and image:
+                contents = [
+                        instructions,
+                        image,
+                        prompt,
+                    ]
+                with st.spinner("Generating recommendation using Gemini..."):
+
+#                    responses = multimodal_model_pro.generate_content(contents, stream=True)
+
+                    # answer  = "Answer is: "
+                    # for response in responses:
+                    #     print(response.text, end="")
+                    #     answer += response.text
+                    
+                    # st.text(answer)
+                    contents = [
+                            instructions,
+                            image,
+                            prompt,
+                        ]
+
+                    response = get_gemini_pro_vision_response(
+                        multimodal_model_pro, contents
+                    )
+                    st.markdown(response)
+        with tab2:
+            st.write("Prompt used:")
+            st.text(
+                "\n".join(
+                    [
+                            instructions,                            
+                            prompt,
+                        ]))
+
+
+with tab6:
+    st.write("Audio & video - STT Chirp")
+
+
+    stt, video  = st.tabs(
+        ["STT Chirp" , "video - youtube"]
+    )
+
+    with stt:
+        st.markdown(
+            """STT"""
+        )
+        
+        language_code =  st.text_input("language_code", value="fr-FR", )
+        REGION =  st.text_input("REGION", value="europe-west4", )
+
+        bt_create_recognizer =st.button(
+            "Create recognizer", key="bt_create_recognizer"
+        )
+
+        if bt_create_recognizer and language_code and REGION :
+            from stt import       get_recognizer
+            recognizer = get_recognizer(language_code)
+            # from google.cloud.speech_v2 import SpeechClient
+            # from google.cloud.speech_v2.types import cloud_speech
+            # from google.api_core.client_options import ClientOptions            
+            # client = SpeechClient(
+            # client_options=ClientOptions(api_endpoint=f"{REGION}-speech.googleapis.com")
+            # )
+            # recognizer_id = f"chirp-{language_code.lower()}-demo"
+
+            # recognizer_request = cloud_speech.CreateRecognizerRequest(
+            #     parent=f"projects/{config.PROJECT_ID}/locations/{config.REGION}",
+            #     recognizer_id=recognizer_id,
+            #     recognizer=cloud_speech.Recognizer(
+            #         language_codes=[language_code],
+            #         model="chirp",
+            #     ),
+            # )
+            # create_operation = client.create_recognizer(request=recognizer_request)
+            # recognizer = create_operation.result()
+            st.write("STT recognizer created: " + recognizer.name)
+            recognizer_id = recognizer.name
+
+        import config as config
+
+        uploaded_file_to_bucket = st.file_uploader("Choose a video or audio file", "uploaded_file_to_bucket")
+        if uploaded_file_to_bucket is not None:
+            # To read file as bytes:
+            media_data = uploaded_file_to_bucket.getvalue()
+            st.write(media_data)
+            print(f"BUCKET_NAME: {config.BUCKET}")
+            gcs_uri_input = gcs.write_bytes_to_gcs(config.BUCKET, "datasets/input/" + uploaded_file_to_bucket.name,  media_data, "binary/octet-stream")
+            print(f"gcs_uri_input: {gcs_uri_input}")
+            gcs_uri_output = f"gs://{config.BUCKET}/datasets/transcript/{uploaded_file_to_bucket.name}/"
+            print(f"gcs_uri_output: {gcs_uri_output}")
+
+        bt_run_stt =st.button(
+            "Run STT", key="bt_run_stt"
+        )
+        
+
+        if bt_run_stt and language_code  and gcs_uri_input and gcs_uri_output:
+            from stt import       transcribe_gcs            
+            # transcribe_gcs(gcs_uri_input, gcs_uri_output, language_code, recognizer_id)
+            with st.spinner("Generating STT using Chirp..."):
+
+                result = transcribe_gcs(gcs_uri_input, gcs_uri_output,"fr-FR")
+                #st.write(result.result.transcripts[0].transcript)
+                st.write("STT done")
+                
+    with video:
+        st.markdown(
+            """video"""
+        )   
+        import youtubeAPI as yt
+        youtube_url =  st.text_input("youtube_url", value="https://www.youtube.com/watch?v=aZ3bX2v3uwo" )
+        bt_run_yt_transcript =st.button(
+            "Export transcript from youtube video and summarize it using Gemini LLM", key="bt_run_yt_transcript"
+        )
+        
+        if bt_run_yt_transcript and youtube_url:
+            transcripts = yt.get_transcript(youtube_url)
+
+            text = ""
+            for transcript in transcripts:
+                text += transcript["text"] + "  "
+            st.write(text)
+
+            response_summary = get_gemini_pro_text_response_prompt(
+                text_model_pro,
+                "Summarize this youtube video:\n" + text,
+                generation_config=config_llm,
+            )
+            if response_summary:
+                st.write("# Summary of youtube video\n" + response_summary)
+            
+
+
+
+
+####
+
+# Streamed response emulator
+def response_generator():
+
+    import langchainAgent as chat
+    
+    bot_response = chat.agent_chain.stream(prompt)
+    if bot_response:
+        yield bot_response
+    else:
+        return
+
+  
+
+if chatbot == True:
+    # Initialize chat history
+    if "messages" not in st.session_state:
+        st.session_state.messages = []
+
+    # Display chat messages from history on app rerun
+    for message in st.session_state.messages:
+        with st.chat_message(message["role"]):
+            st.markdown(message["content"])
+
+    # Accept user input
+    if prompt := st.chat_input("Comment puis-je vous aider ?"):
+        # Add user message to chat history
+        st.session_state.messages.append({"role": "user", "content": prompt})
+        # Display user message in chat message container
+        with st.chat_message("user"):
+            st.markdown(prompt)
+
+        # Display assistant response in chat message container
+        with st.chat_message("assistant"):
+            stream = response_generator()
+            try:
+                response = st.write_stream(stream)
+            except:
+                print()
+        try:
+        # Add assistant response to chat history        
+            st.session_state.messages.append({"role": "assistant", "content": response})
+        except:
+            print()
+
+    # # Initialize chat history
+    # if "messages" not in st.session_state:
+    #     st.session_state.messages = []
+
+    # # Display chat messages from history on app rerun
+    # for message in st.session_state.messages:
+    #     with st.chat_message(message["role"]):
+    #         st.markdown(message["content"])
+
+    # # React to user input
+    # if prompt := st.chat_input("What is up?"):
+    #     # Display user message in chat message container
+    #     st.chat_message("user").markdown(prompt)
+    #     # Add user message to chat history
+    #     st.session_state.messages.append({"role": "user", "content": prompt})
+
+    #     response = f"Echo: {prompt}"
+    #     # Display assistant response in chat message container
+    #     with st.chat_message("assistant"):
+    #         st.markdown(response)
+    #     # Add assistant response to chat history
+    #     st.session_state.messages.append({"role": "assistant", "content": response})

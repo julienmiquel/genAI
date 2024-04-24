@@ -1,0 +1,8 @@
+streamlit
+google-cloud-aiplatform
+google-cloud-logging
+google-cloud-speech
+google-cloud-storage
+pytesseract 
+PyPDF2
+textract

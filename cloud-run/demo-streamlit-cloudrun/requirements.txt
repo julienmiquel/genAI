@@ -1,0 +1,12 @@
+google-cloud-aiplatform
+google-cloud-logging
+google-cloud-speech
+google-cloud-storage
+google-cloud-texttospeech
+google-cloud-discoveryengine
+youtube-transcript-api
+streamlit==1.32.2
+langchain
+langchain-google-vertexai
+faiss-cpu
+pypdf

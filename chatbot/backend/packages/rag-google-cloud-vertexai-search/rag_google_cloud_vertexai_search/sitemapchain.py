@@ -43,6 +43,22 @@ model = ChatVertexAI(model_name=LLM_CHAT_MODEL_VERSION,
 # Create Vertex AI retriever
 retriever = get_retriever()
 
+from langchain_community.document_loaders.sitemap import SitemapLoader
+
+sitemap_loader = SitemapLoader(web_path="https://langchain.readthedocs.io/sitemap.xml")
+
+loader = SitemapLoader(
+    web_path="https://langchain.readthedocs.io/sitemap.xml",
+    filter_urls=["https://api.python.langchain.com/en/latest"],
+)
+documents = loader.load()
+
+docs = sitemap_loader.load()
+
+sitemap_loader.requests_per_second = 2
+# Optional: avoid `[SSL: CERTIFICATE_VERIFY_FAILED]` issue
+sitemap_loader.requests_kwargs = {"verify": False}
+
 # RAG prompt
 template = """Answer the question in French based only on the following context with the urls of sources:
 {context}
