@@ -1,7 +1,7 @@
 import streamlit as st
 from PIL import Image
-from src.utils import *
-from src.vertex import *
+import utils as utils
+import vertex as vertex
 
 # Utils
 import time
@@ -62,7 +62,7 @@ class CustomVertexAIEmbeddings(VertexAIEmbeddings, BaseModel):
 
 # LLM model
 llm = VertexAI(
-    model_name="text-bison@001",
+    model_name="text-bison@002",
     max_output_tokens=256,
     temperature=0.1,
     top_p=0.8,

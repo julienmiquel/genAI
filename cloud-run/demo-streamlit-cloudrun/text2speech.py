@@ -15,8 +15,41 @@
 from google.cloud import texttospeech
 import config as config
 
+def synthesize_text(text, language_code="en-US", voice_name="en-US-Standard-A", output_file="output.mp3"):
+    """Synthesizes speech from the input string of text."""
+    from google.cloud import texttospeech
 
-def synthesize_long_audio(project_id, location, output_gcs_uri, language_code="en-US", voice_name="en-US-Standard-A"):
+    client = texttospeech.TextToSpeechClient()
+
+    input_text = texttospeech.SynthesisInput(ssml=text)
+
+    # Note: the voice can also be specified by name.
+    # Names of voices can be retrieved with client.list_voices().
+    voice = texttospeech.VoiceSelectionParams(
+        language_code=language_code,
+        name=voice_name,
+        ssml_gender=texttospeech.SsmlVoiceGender.FEMALE,
+    )
+
+    audio_config = texttospeech.AudioConfig(
+        audio_encoding=texttospeech.AudioEncoding.MP3
+    )
+
+    response = client.synthesize_speech(
+        request={"input": input_text, "voice": voice, "audio_config": audio_config}
+    )
+    
+    # The response's audio_content is binary.
+    with open(output_file, "wb") as out:
+        out.write(response.audio_content)
+        print(f'Audio content written to file "{output_file}"')
+    
+    return response.audio_content, output_file
+
+
+
+
+def synthesize_long_audio(text, output_gcs_uri, language_code="en-US", voice_name="en-US-Standard-A"):
     """
     Synthesizes long input, writing the resulting audio to `output_gcs_uri`.
 
@@ -27,11 +60,11 @@ def synthesize_long_audio(project_id, location, output_gcs_uri, language_code="e
     client = texttospeech.TextToSpeechLongAudioSynthesizeClient()
 
     input = texttospeech.SynthesisInput(
-        text="Test input. Replace this with any text you want to synthesize, up to 1 million bytes long!"
+        text=text, ignore_unknown_fields=True
     )
 
     audio_config = texttospeech.AudioConfig(
-        audio_encoding=texttospeech.AudioEncoding.LINEAR16
+        audio_encoding=texttospeech.AudioEncoding.MP3
     )
 
     voice = texttospeech.VoiceSelectionParams(

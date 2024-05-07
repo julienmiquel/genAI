@@ -39,3 +39,52 @@ def write_bytes_to_gcs(bucket_name, blob_name, video_bytes, content_type='video/
         f"Video uploaded to gs://{bucket_name}/{blob_name}."
     )
     return f"gs://{bucket_name}/{blob_name}"
+
+
+def write_file_to_gcs(gcs_bucket_name,  gcs_file_name, local_file_path, tags = None):
+    """Writes a local file to GCS.
+
+    Args:
+    local_file_path: The path to the local file to write to GCS.
+    gcs_bucket_name: The name of the GCS bucket to write the file to.
+    gcs_file_name: The name of the GCS file to write the file to.
+
+    Returns:
+    The GCS file path.
+    """
+    print(f"local_file_path = {local_file_path} - gcs_bucket_name = {gcs_bucket_name} - gcs_file_name = {gcs_file_name}")
+    storage_client = storage.Client()
+    bucket = storage_client.bucket(gcs_bucket_name)
+    blob = bucket.blob(gcs_file_name)
+    if tags is not None:
+        blob.metadata = tags
+
+    print(f"upload_from_filename : local_file_path = {local_file_path}")
+    blob.upload_from_filename(local_file_path, ) 
+
+    return blob
+
+
+def store_temp_video_from_gcs(bucket_name, file_name, localfile):
+    import tempfile
+    import os
+
+    storage_client = storage.Client()
+    bucket = storage_client.bucket(bucket_name)
+    blob = bucket.blob(file_name)
+
+    # try:        
+    bytes_data = blob.download_as_bytes()
+    
+    # Create a temporary file.
+    # tempDir = tempfile.gettempdir()
+    tempDir = os.getcwd()
+
+    temp_path = os.path.join(tempDir, localfile)
+    # f, temp_path = tempfile.mkstemp()
+    fp = open(temp_path, 'bw')
+    fp.write(bytes_data)
+    fp.seek(0)
+
+
+    return temp_path

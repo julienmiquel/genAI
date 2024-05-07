@@ -15,3 +15,6 @@ STT_REGION = "eu"
 DATA_STORE_ID = "datastore"
 
 BUCKET = "ml-demo-eu" #os.environ.get("GCP_BUCKET", "ml-demo-eu")  # Your GCS bucket name
+
+GEMINI_MULTIMODAL_MODEL_NAME = "gemini-1.5-pro-preview-0409"  # @param {type:"string"}
+

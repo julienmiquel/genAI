@@ -20,3 +20,7 @@ chatbot/backend/app/__pycache__/__init__.cpython-310.pyc
 chatbot/backend/app/__pycache__/__init__.cpython-310.pyc
 chatbot/backend/packages/rag-google-cloud-vertexai-search/rag_google_cloud_vertexai_search/__pycache__/__init__.cpython-310.pyc
 chatbot/backend/packages/rag-google-cloud-vertexai-search/rag_google_cloud_vertexai_search/__pycache__/chain.cpython-310.pyc
+cloud-run/demo-streamlit-cloudrun/*.mp3
+cloud-run/demo-streamlit-cloudrun/firebase-key.json
+cloud-run/demo-streamlit-cloudrun/firebase.json
+cloud-run/demo-streamlit-cloudrun/*.mp4

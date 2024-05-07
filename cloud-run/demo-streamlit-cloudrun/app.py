@@ -1,7 +1,11 @@
+import io
 import random
 import time
 import streamlit as st
+import videoedit as videoedit
+
 from vertexai.vision_models import ImageTextModel
+from google.api_core.exceptions import InvalidArgument
 
 from vertexai.preview.generative_models import (
     GenerationConfig,
@@ -31,6 +35,10 @@ st.set_page_config(layout="wide")
 
 chatbot = False
 
+@st.cache_data(persist=True)
+def cache_index():      
+    return 1
+
 @st.cache_resource
 def load_models():
     try:
@@ -40,9 +48,9 @@ def load_models():
         text_model_pro = None
 
     try:
-        multimodal_model_pro = GenerativeModel("gemini-pro-vision")
+        multimodal_model_pro = GenerativeModel(config.GEMINI_MULTIMODAL_MODEL_NAME)
     except:
-        print("ERROR      GenerativeModel(gemini-pro-vision)")
+        print(f"ERROR      GenerativeModel({config.GEMINI_MULTIMODAL_MODEL_NAME})")
         multimodal_model_pro = None
     try:
         image_model = ImageGenerationModel.from_pretrained("imagegeneration@005")
@@ -68,7 +76,7 @@ def cache_data():
 
 def get_gemini_pro_text_response(
     model: GenerativeModel,
-    contents: str,
+    prompt: str,
     generation_config: GenerationConfig,
     stream: bool = True,
 ):
@@ -443,7 +451,7 @@ with tab2:
    Give proper bullet points and headlines for the marketing campaign. Do not produce any empty lines.
    Be very succinct and to the point.
     """
-    config = {
+    generation_config = {
         "temperature": 0.8,
         "max_output_tokens": 2048,
     }
@@ -455,7 +463,7 @@ with tab2:
                 response = get_gemini_pro_text_response(
                     text_model_pro,
                     prompt,
-                    generation_config=config,
+                    generation_config=generation_config,
                 )
                 if response:
                     st.write("Your marketing campaign:")
@@ -1148,13 +1156,320 @@ JSON:"""
                         ]))
 
 
+def stt_generate_summary(text_to_generate_podcast, prompt_content_balise_start, prompt_content_balise_stop):
+    config_llm = {
+        "temperature": 0.2,
+        "max_output_tokens": 6144,
+        "top_p": 1.0,                    
+    }
+    podcast_summary_prompt = f"""{prompt_content_balise_start}
+        {text_to_generate_podcast}
+        {prompt_content_balise_stop}
+<TASK>
+Summarize CONTENT in FRENCH to be read in a podcast.
+</TASK>
+        """
+                    
+    text_summary_to_generate_podcast = get_gemini_pro_text_response_prompt(
+                        multimodal_model_pro, podcast_summary_prompt,generation_config=config_llm
+                    )
+    
+    
+    print(text_summary_to_generate_podcast)
+    return podcast_summary_prompt,text_summary_to_generate_podcast
+
+def stt_generate_title( prompt_content_balise_start, prompt_content_balise_stop, text_summary_to_generate_podcast):
+    podcast_title_prompt = f"""{prompt_content_balise_start}
+        {text_summary_to_generate_podcast}
+        {prompt_content_balise_stop}
+<TASK>
+Create a short title in ENGLISH in one sentence based on this content.
+</TASK>
+        """
+
+                    # SSML generation
+    config_llm = {
+                        "temperature": 0.1,
+                        "max_output_tokens": 8192,
+                        "top_p": 1.0,                    
+                    }
+
+    podcast_title = get_gemini_pro_text_response_prompt(
+                        multimodal_model_pro, podcast_title_prompt,generation_config=config_llm
+                    )
+    
+    podcast_title = podcast_title.encode('ascii', 'ignore').decode('ascii')
+    podcast_title = podcast_title.replace("'", " ").replace(":"," ").replace("//"," ").replace("\\"," ").replace(","," ").replace("  "," ")
+    
+
+    return podcast_title
+
 with tab6:
     st.write("Audio & video - STT Chirp")
 
 
-    stt, video  = st.tabs(
-        ["STT Chirp" , "video - youtube"]
+    podcast_all, gemini_stt, stt, video  = st.tabs(
+        ["Podcast every-things", "Gemini as STT", "STT Chirp" , "video - youtube"]
     )
+
+    with podcast_all:
+        st.markdown(
+            """Podcast every-things"""
+        )
+        text_to_generate_podcast =  st.text_area("text_to_generate_podcast", value="" )
+        url_to_generate_podcast =  st.text_input("url_to_generate_podcast", value="" )
+        #youtube_url_to_generate_podcast =  st.text_input("youtube_url_to_generate_podcast", value="" )
+
+        generate_podcast = st.button(
+            "Generate podcast from content", key="generate_podcast"
+        )
+
+        # 1) Get text and generate prompt
+
+        #         Use language voice identifier to generate differente voice chunch.
+        # Use voice in this list to alternate :
+
+        prompt_task = """<TASK>
+You are an SSML generator. You produce very high actor by variate the prosody, pitch, emphasis...        
+Transform the following content into a podcast script in FRENCH and respect the SSML format.
+The content is suitable for a advanced tech guys on all the topic described between CONTENT tags.
+The output is a valide SSML format.
+SSML format is The Speech Synthesis Markup Language is an XML application. The root element is speak.
+Do not use <voice> tags.
+
+Only generate valide SSML.
+Check twice the SSML is valide.
+BE SURE TO GENERATE VALIDE SSML.        
+        </TASK>"""
+        prompt_content_balise_start = "<CONTENT>"
+        prompt_content_balise_stop = "</CONTENT>"
+
+        prompt_FORMAT = """<FORMAT> Use the following format:
+        fr-FR-Studio-A:text...        fr-FR-Studio-D:text...        fr-FR-Wavenet-A:text...        fr-FR-Wavenet-B:text...
+        fr-FR-Wavenet-D:text...        fr-FR-Wavenet-E:text...
+         </FORMAT>"""
+        
+        prompt_FORMAT = """<OUTPUT_FORMAT>
+Generate SSML with various French voice:
+    - 'fr-FR-Studio-A'
+    - 'fr-FR-Studio-D'
+    - 'fr-FR-Wavenet-A'
+    - 'fr-FR-Wavenet-B'
+    - 'fr-FR-Wavenet-D'
+    - 'fr-FR-Wavenet-E'
+
+Example of valide SSML format:
+    <speak>
+    <say-as interpret-as='currency' language='fr-FR'>42,01 €</say-as>
+    <say-as interpret-as="verbatim">LLM</say-as>
+    <say-as interpret-as="characters">LLM</say-as>
+    <say-as interpret-as="characters">IA</say-as>
+    <sub alias="World Wide Web Consortium">W3C</sub>
+    <sub alias="Les Grands Modèles de Langage">LLMs</sub>
+    <sub alias="Intelligence ">IA</sub>
+    <say-as interpret-as="cardinal">12345</say-as>
+    <s><prosody rate="medium" pitch="+2st">Salut  les techos ! Aujourd'hui, on plonge dans l'univers fascinant de l'IA générative et de l'orchestration des modèles de langage.</s></s>
+    <p>
+        <s><prosody rate="fast" pitch="+3st">Yo les développeurs ! Prêts à booster vos projets avec l'IA générative ?</s></s>
+        <s>Workflows débarque pour orchestrer vos LLMs et automatiser des  tâches de fou, comme le résumé de documents longs.</s>
+        <s>Fini les prises de tête avec les frameworks d'orchestration, Workflows simplifie tout !</s> 
+    </p>
+    <emphasis level="moderate">This is an important announcement</emphasis>
+
+    Step 1, take a deep breath. <break time="200ms"/>
+    Step 2, exhale.
+    Step 3, take a deep breath again. <break strength="weak"/>
+    Step 4, exhale.
+
+    Here are <say-as interpret-as="characters">SSML</say-as> samples.
+    I can pause <break time="3s"/>.  
+    I can speak in cardinals. Your number is <say-as interpret-as="cardinal">10</say-as>.
+    Or I can speak in ordinals. You are <say-as interpret-as="ordinal">10</say-as> in line.
+    Or I can even speak in digits. The digits for ten are <say-as interpret-as="characters">10</say-as>.
+    I can also substitute phrases, like the <sub alias="World Wide Web Consortium">W3C</sub>.
+    Finally, I can speak a paragraph with two sentences.
+    <p><s>This is sentence one.</s><s>This is sentence two.</s></p>
+    </speak>
+
+</OUTPUT_FORMAT>"""
+
+            
+#
+
+        # 2) Generate script
+        if generate_podcast and text_to_generate_podcast and len(text_to_generate_podcast) > 0:
+
+                with st.spinner("Generating summary using Gemini..."):
+                    podcast_summary_prompt, text_summary_to_generate_podcast = stt_generate_summary(text_to_generate_podcast, prompt_content_balise_start, prompt_content_balise_stop)
+                    with st.expander("Summary", expanded=True):    
+                        st.markdown(text_summary_to_generate_podcast)
+
+                # with st.spinner("Generating podcast title using Gemini..."):                    
+                #     podcast_title = stt_generate_title( prompt_content_balise_start, prompt_content_balise_stop, text_summary_to_generate_podcast)
+                #     podcast_title = podcast_title.replace("#","").replace("*","")
+                #     st.markdown(f"# TITLE : {podcast_title}")
+                #     print(podcast_title)
+                podcast_title = ""
+
+                with st.spinner(f"Generating SSML {podcast_title} using Gemini..."):                    
+                    # SSML generation
+                    config_llm = {
+                                        "temperature": 0.1,
+                                        "max_output_tokens": 8192,
+                                        "top_p": 1.0,                    
+                                    }
+
+                    podcast_prompt = f"""
+                {prompt_content_balise_start}
+                {text_summary_to_generate_podcast}
+                {prompt_content_balise_stop}
+                {prompt_FORMAT}
+                {prompt_task}
+                """
+
+                #     text_summary_to_generate_podcast = get_gemini_pro_text_response_prompt(
+                #         multimodal_model_pro, podcast_prompt,generation_config=config_llm
+                #     )
+                #     st.write(text_summary_to_generate_podcast)
+                #     print(text_summary_to_generate_podcast)
+
+                #     print(podcast_prompt)
+
+                with st.spinner(f"Generating SSML podcast for {podcast_title} using Gemini..."):             
+                    response_ssml = get_gemini_pro_text_response_prompt(
+                        multimodal_model_pro, podcast_prompt,generation_config=config_llm
+                    )
+                    ssml = response_ssml.replace("</ ", "</").replace("  ", " ").replace("**", "*").replace("##", "#").replace("fr-FR ","fr-FR").replace("fr- ","fr-").replace("pros ody", "prosody")
+                    with st.expander("SSML Gen 1", expanded=False):    
+                        st.markdown(response_ssml)
+                    
+
+                # with st.spinner(f"Generating Gen 2"):             
+
+                #     response_ssml = get_gemini_pro_text_response_prompt(
+                #                             multimodal_model_pro, 
+                #                             f"""PROVIDE valide SSML document and solve error based on this document:
+                #                               {response_ssml}""",
+                #                             generation_config=config_llm
+                #                         )
+                #     with st.expander("SSML Gen 2", expanded=False):    
+                #         st.markdown(response_ssml)
+                                        
+
+        # 3) Generate speech
+
+        
+        # if generate_podcast_speech:
+                if response_ssml:
+                    with st.expander("SSML generation", expanded=True):        
+                        st.write("# SSML generation" )
+                        import text2speech as speech
+                        import utils as utils
+                        mp3_chunck = []
+                        mp3_localFiles = []
+                        ssml = response_ssml.replace("</ ", "</").replace("**", "*").replace("##", "#").replace("fr-FR ","fr-FR").replace("fr- ","fr-").replace("pros ody", "prosody")
+                        chuncks = utils.extract_speak_content(ssml)                    
+                        index = 0
+                        podcast_chunck_file = f"{podcast_title}  {utils.create_timestamped_name('podcast')}"
+                        for chunck in chuncks:                    
+                            try:
+                                print(80*"-")
+                                print(f"chunck: {chunck}")
+                                index_speak = f"{chunck}".find("<speak>")
+                                if index_speak == -1:
+                                    chunck = f"<speak>{chunck}</speak>"
+                                    print("add speak tag")
+                                    st.markdown(chunck)
+
+                                st.markdown(f"# chunck: {index} ")
+                                
+                                speech_file = f"{podcast_chunck_file}_{index}.mp3"
+                                
+                                index = index + 1
+                                speech_path = "podcasts/"
+                                speech_output=    f"gs://{config.BUCKET}/{speech_path}{speech_file}"
+                                mp3_chunck.append(speech_output)
+                                
+                                print(f"speech_output: {speech_output}")                        
+
+                                with st.spinner("Generating podcast TTS..."):
+                                    #speech_result = speech.synthesize_long_audio(response, speech_output,language_code="fr-FR", voice_name="fr-FR-Studio-A")
+                                    # gcs.store_temp_video_from_gcs(config.BUCKET,f"{speech_path}{speech_file}", speech_file)
+                                    # audio_file = open(speech_file, "rb")
+                                    # audio_bytes = audio_file.read()                        
+                                    audio_bytes, speech_file  = speech.synthesize_text(chunck, language_code="fr-FR", voice_name="fr-FR-Wavenet-A", output_file=speech_file)
+                                    
+                                    #st.markdown(speech_result)
+
+
+                                    st.audio(audio_bytes, format="audio/mp3")
+                                    gcs.write_file_to_gcs(config.BUCKET,f"{speech_path}{speech_file}",speech_file)
+                                    mp3_localFiles.append(speech_file)
+                            except InvalidArgument as e :
+                                st.markdown(e)                            
+                            
+                    with st.expander("Final podcast", expanded=True):        
+                        
+                        if len(mp3_localFiles) > 0:
+                            
+                            complete_filename = f"{podcast_chunck_file}_complete.mp3"
+                            complete_filename = videoedit.combine_audio_files(mp3_localFiles, complete_filename)
+                            with open(complete_filename, "rb") as audio_file:
+                                audio_bytes = audio_file.read()
+
+                                st.audio(audio_bytes, "audio/mp3")
+                                gcs.write_file_to_gcs(config.BUCKET,f"{complete_filename}",complete_filename)
+                        else:
+                            st.markdown("# No audio generated")
+
+
+    with gemini_stt:
+        st.markdown(
+            """Gemini as STT"""
+        )
+        language_code_gemini =  st.text_input("language_code_gemini", value="fr-FR", )
+
+
+        uploaded_sound_to_bucket = st.file_uploader("Choose a audio file", type=None)
+        if uploaded_sound_to_bucket is not None:
+            # To read file as bytes:
+            media_data = uploaded_sound_to_bucket.getvalue()
+            #st.write(media_data)
+            print(f"BUCKET_NAME: {config.BUCKET}")
+            gcs_uri_input = gcs.write_bytes_to_gcs(config.BUCKET, "datasets/input/" + uploaded_sound_to_bucket.name,  media_data, "binary/octet-stream")
+            print(f"gcs_uri_input: {gcs_uri_input}")
+            gcs_uri_output = f"gs://{config.BUCKET}/datasets/transcript/{uploaded_sound_to_bucket.name}/"
+            print(f"gcs_uri_output: {gcs_uri_output}")
+
+        bt_run_stt_gemini =st.button(
+            "Run STT", key="bt_run_stt_gemini"
+        )
+        if bt_run_stt_gemini and language_code_gemini  and gcs_uri_input and gcs_uri_output:
+            from gemini import       generate_transcript_from_audio
+            
+            final_res= ""
+            with st.spinner("Generating STT using Gemini..."):
+                audio = Part.from_uri(gcs_uri_input, mime_type="audio/x-m4a") 
+
+                results = generate_transcript_from_audio(audio, language=language_code_gemini)
+                for result in results:
+                    if result[0] is not None:
+                        st.markdown(result[0])                    
+
+                    if result[1] is not None:
+                        final_res = result[1]
+                    
+                
+                import gcs as gcs
+
+                                
+                gcs.write_string_to_bucket(config.BUCKET, f"/datasets/transcript/{uploaded_sound_to_bucket.name}/",final_res)
+            
+            st.markdown(f"Final result also available here: {gcs_uri_output}")
+            st.markdown(final_res)
+            st.write("STT done")
+                        
+
 
     with stt:
         st.markdown(
@@ -1194,7 +1509,7 @@ with tab6:
 
         import config as config
 
-        uploaded_file_to_bucket = st.file_uploader("Choose a video or audio file", "uploaded_file_to_bucket")
+        uploaded_file_to_bucket = st.file_uploader("Choose a video or audio file")
         if uploaded_file_to_bucket is not None:
             # To read file as bytes:
             media_data = uploaded_file_to_bucket.getvalue()
@@ -1215,7 +1530,7 @@ with tab6:
             # transcribe_gcs(gcs_uri_input, gcs_uri_output, language_code, recognizer_id)
             with st.spinner("Generating STT using Chirp..."):
 
-                result = transcribe_gcs(gcs_uri_input, gcs_uri_output,"fr-FR")
+                result = transcribe_gcs(gcs_uri_input, gcs_uri_output, language_code)
                 #st.write(result.result.transcripts[0].transcript)
                 st.write("STT done")
                 

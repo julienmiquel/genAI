@@ -1,7 +1,7 @@
 export GCP_PROJECT='ml-demo-384110'  # Change this
 export GCP_REGION='us-central1'             # If you change this, make sure region is supported by Model Garden. When in 
 
-copy Dockerfile-video Dockerfile
+cp Dockerfile-video Dockerfile
 export AR_REPO='dev-repo'  # Change this
 export SERVICE_NAME='demo-ia-video-app' # This is the name of our Application and Cloud Run service. Change it if you'd like. 
 gcloud artifacts repositories create "$AR_REPO" --location="$GCP_REGION" --repository-format=Docker

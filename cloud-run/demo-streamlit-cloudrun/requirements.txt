@@ -5,6 +5,12 @@ google-cloud-storage
 google-cloud-texttospeech
 google-cloud-discoveryengine
 youtube-transcript-api
+beautifulsoup4
+lxml
+Pillow==9.4.0
+ImageMagic
+streamlit-analytics
+pytube
 streamlit==1.32.2
 langchain
 langchain-google-vertexai
