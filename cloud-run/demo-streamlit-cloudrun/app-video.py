@@ -515,8 +515,8 @@ if chatbot == True:
 #         """
 
 # st.markdown(script2, unsafe_allow_html=True, allow_javascript=True, allow_html=True)
-
-st.markdown("> **Build with** ❤️  by  **[\@julienmiquel](mailto:julienmiquel@google.com)**")
+from app_footer import footer
+footer(st)
 
 # st.markdown(script2, unsafe_allow_html=True)
 # def inject_ga():

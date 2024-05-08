@@ -1632,3 +1632,7 @@ if chatbot == True:
     #         st.markdown(response)
     #     # Add assistant response to chat history
     #     st.session_state.messages.append({"role": "assistant", "content": response})
+
+
+from app_footer import footer
+footer(st)
