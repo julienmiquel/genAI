@@ -69,7 +69,7 @@ def cache_data():
 
 def get_gemini_pro_text_response(
     model: GenerativeModel,
-    contents: str,
+    prompt: str,
     generation_config: GenerationConfig,
     stream: bool = True,
 ):

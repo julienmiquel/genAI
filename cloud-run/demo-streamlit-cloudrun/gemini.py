@@ -61,13 +61,14 @@ def LoadJsonData(data):
 
 # @title generate function with gemini
 
-def generate_transcript_from_audio(audio, language):
+def generate_transcript_from_audio(audio, language, model):
     vertexai.init(project=config.PROJECT_ID, location=config.REGION)
 
     generation_config = {
         "max_output_tokens": 8192,
         "top_p": 1.0,
         "temperature": 0.0,
+        "response_mime_type": "application/json",
     }
 
     safety_settings = {
@@ -77,7 +78,7 @@ def generate_transcript_from_audio(audio, language):
         generative_models.HarmCategory.HARM_CATEGORY_HARASSMENT: generative_models.HarmBlockThreshold.BLOCK_ONLY_HIGH,
     }
 
-    model = GenerativeModel(config.GEMINI_MULTIMODAL_MODEL_NAME )
+    model = GenerativeModel(model_name=model )
 
     task = f"""
 
@@ -110,6 +111,130 @@ def generate_transcript_from_audio(audio, language):
 
     yield (None, CleanData("".join(result)))
 
+
+
+def generate_chaptering_from_audio(audio, language, model):
+    vertexai.init(project=config.PROJECT_ID, location=config.REGION)
+
+    generation_config = {
+        "max_output_tokens": 8192,
+        "top_p": 1.0,
+        "temperature": 0.0,
+        "response_mime_type": "application/json",
+    }
+
+    safety_settings = {
+        generative_models.HarmCategory.HARM_CATEGORY_HATE_SPEECH: generative_models.HarmBlockThreshold.BLOCK_ONLY_HIGH,
+        generative_models.HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT: generative_models.HarmBlockThreshold.BLOCK_ONLY_HIGH,
+        generative_models.HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT: generative_models.HarmBlockThreshold.BLOCK_ONLY_HIGH,
+        generative_models.HarmCategory.HARM_CATEGORY_HARASSMENT: generative_models.HarmBlockThreshold.BLOCK_ONLY_HIGH,
+    }
+
+    model = GenerativeModel(model_name=model )
+
+    task = f"""
+
+  <Task>
+  Create chapter in {language} from this recording from the beginning to the end of the recording.
+  Identify each topics discussed in this recording and create a short description for each of them.
+  topic name need to be unique.
+  </Task>
+
+  <answer_format>
+  JSON keys: topic, time_start, time_stop, description of the topic.
+  topic is name/title of the subject/topics discussed in this part of this recording.
+  topic name need to be unique.
+  time_start and time_stop are the full time in seconds and not truncated.
+  description is the full description of the subject/topics discussed in this part of this recording
+  </answer_format>
+  """
+
+    responses = model.generate_content(
+        ["<interview>", audio, "</interview>", task],
+        generation_config=generation_config,
+        safety_settings=safety_settings,
+        stream=True,
+    )
+
+    result = []
+    for response in responses:
+        value = response.text
+        print(value, end="")
+        result.append(value)
+        yield (value, None)
+
+    yield (None, CleanData("".join(result)))
+
+
+
+def generate_text(text, prompt, model):
+    vertexai.init(project=config.PROJECT_ID, location=config.REGION)
+
+    generation_config = {
+        "max_output_tokens": 8192,
+        "top_p": 1.0,
+        "temperature": 0.2,        
+    }
+
+    safety_settings = {
+        generative_models.HarmCategory.HARM_CATEGORY_HATE_SPEECH: generative_models.HarmBlockThreshold.BLOCK_ONLY_HIGH,
+        generative_models.HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT: generative_models.HarmBlockThreshold.BLOCK_ONLY_HIGH,
+        generative_models.HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT: generative_models.HarmBlockThreshold.BLOCK_ONLY_HIGH,
+        generative_models.HarmCategory.HARM_CATEGORY_HARASSMENT: generative_models.HarmBlockThreshold.BLOCK_ONLY_HIGH,
+    }
+
+    model = GenerativeModel(model_name=model )
+
+    responses = model.generate_content(
+        ["<text>", text, "</text>", prompt],
+        generation_config=generation_config,
+        safety_settings=safety_settings,
+        stream=True,
+    )
+
+    result = []
+    for response in responses:
+        value = response.text
+        print(value, end="")
+        result.append(value)
+        yield (value, None)
+
+    yield (None, CleanData("".join(result)))
+
+def generate_prompt(text, prompt, model):
+    vertexai.init(project=config.PROJECT_ID, location=config.REGION)
+
+    generation_config = {
+        "max_output_tokens": 8192,
+        "top_p": 1.0,
+        "temperature": 0.0,
+        "response_mime_type": "application/json",
+    }
+
+    safety_settings = {
+        generative_models.HarmCategory.HARM_CATEGORY_HATE_SPEECH: generative_models.HarmBlockThreshold.BLOCK_ONLY_HIGH,
+        generative_models.HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT: generative_models.HarmBlockThreshold.BLOCK_ONLY_HIGH,
+        generative_models.HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT: generative_models.HarmBlockThreshold.BLOCK_ONLY_HIGH,
+        generative_models.HarmCategory.HARM_CATEGORY_HARASSMENT: generative_models.HarmBlockThreshold.BLOCK_ONLY_HIGH,
+    }
+
+    model = GenerativeModel(model_name=model )
+
+    responses = model.generate_content(
+        ["<text>", text, "</text>", prompt],
+        generation_config=generation_config,
+        safety_settings=safety_settings,
+        stream=True,
+    )
+
+    result = []
+    for response in responses:
+        value = response.text
+        print(value, end="")
+        result.append(value)
+        yield (value, None)
+
+    yield (None, CleanData("".join(result)))
 
 # @title Execute the code to get transcript in cloud storage
 

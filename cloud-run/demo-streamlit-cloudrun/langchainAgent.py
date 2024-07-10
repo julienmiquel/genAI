@@ -115,8 +115,8 @@ def generate_gemini_1_pro(prompt):
   return "".join(array)
 
 
-print("sanity check generate_gemini_1_pro")
-generate_gemini_1_pro("what is gemini llm ?")
+# print("sanity check generate_gemini_1_pro")
+# generate_gemini_1_pro("what is gemini llm ?")
 
 # Tool to search the company knowledge base using Vertex Search to get information
 # About google Analytics documentation
@@ -213,6 +213,7 @@ verbose = False #@param
 history = ConversationBufferMemory(memory_key="chat_history")
 
 # Agent initialization, here the ReAct prompt strategy is implemented.
-agent_chain = initialize_agent(tools, llm, agent=AgentType.CONVERSATIONAL_REACT_DESCRIPTION, verbose=verbose, memory=history, agent_kwargs={'prefix':context})
+agent_chain = initialize_agent(tools, llm, agent=AgentType.CONVERSATIONAL_REACT_DESCRIPTION, 
+                               verbose=verbose, memory=history, agent_kwargs={'prefix':context})
 
 

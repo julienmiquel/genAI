@@ -335,24 +335,6 @@ except:
 
 st.components.v1.iframe(f"https://www.youtube.com/embed/{video_id}" , width=1000, height=500, scrolling=False) 
 
-# bt_run_yt_download =st.button(
-#     "Download youtube video and summarize it using Gemini multimodal LLM", key="bt_run_yt_download"
-# )
-
-# if bt_run_yt_download and video_id:
-#     from pytube import YouTube
-#     YouTube(f'https://youtu.be/{video_id}').streams.first().download(filename=f"{video_id}.mp4")
-    
-#     #open media file  
-#     with io.open(f"{video_id}.mp4", 'rb') as f:
-#         f.seek(0)
-#         media_data = f.read()
-    
-#     #upload media file to gcs    
-#     gcs_uri_input = gcs.write_bytes_to_gcs(config.BUCKET, "datasets/youtube/video/" + f"{video_id}.mp4",  media_data, "binary/octet-stream")
-#     st.write(gcs_uri_input)
-
-
 
 if bt_run_yt_transcript and youtube_url:
  

@@ -1,4 +1,6 @@
+import datetime
 import io
+import os
 import random
 import time
 import streamlit as st
@@ -31,7 +33,7 @@ import config as config
 
 vertexai.init(project=config.PROJECT_ID, location=config.REGION)
 
-st.set_page_config(layout="wide")
+st.set_page_config(page_title="Google Cloud AI Demos (Gemini) - Gemini Demos", layout="wide")
 
 chatbot = False
 
@@ -171,14 +173,40 @@ import data as data
 
 print("init page")
 
-st.header("Vertex AI Demo", divider="rainbow",)
+
+st.header("Vertex AI Demo", divider="rainbow", anchor="vertex")
 text_model_pro, multimodal_model_pro, image_model, image2text_model = load_models()
 
 story_data = cache_data()
-
+list_of_tabs_name = ["Image","audio", "Real-estate", "story", "Marketing",  "video", ]
 tab3, tab6, tab5, tab1, tab2,  tab4,  = st.tabs(
-    ["Image Playground","Audio & video", "Real-estate", "Generate story", "Marketing campaign",  "Video Playground", ]
+    ["Image Playground","Audio & video", "Real-estate", "Generate story", "Marketing campaign",  "Video Playground", ],    
+    #["Image","audio", "Real-estate", "story", "Marketing",  "video", ],    
 )
+list_of_tabs = [tab3, tab6, tab5, tab1, tab2,  tab4]
+
+
+
+# try:    
+#     # Handling query parameters
+#     query = st.query_params
+
+#     ## Look-up the tab from the query
+#     index_tab = list_of_tabs_name.index(query["tab"][0])
+#     # with list_of_tabs[index_tab]:
+#     #     st.write(query["tab"])
+
+#     my_js = """
+#     alert("Hola mundo");
+#     """
+#     my_html = f"<script>{my_js}</script>"
+
+#     st.components.v1.html(my_html)
+#     st.markdown(my_html,unsafe_allow_html=True)
+
+# except ValueError:
+#     ## Do nothing if the query parameter does not correspond to any of the tabs
+#     pass
 
 
 @st.cache_data(persist=True)
@@ -201,7 +229,7 @@ def submit():
 
 with tab1:
     st.write("Using Gemini Pro - Text only model")
-    st.subheader("Generate a story")
+    st.subheader("Generate a story", anchor="story")
 
     character_name_value = loadData()#, character_type_value, character_persona_value, character_location_value, story_premise_value 
     
@@ -368,7 +396,7 @@ with tab1:
                 
 with tab2:
     st.write("Using Gemini Pro - Text only model")
-    st.subheader("Generate your marketing campaign")
+    st.subheader("Generate your marketing campaign", anchor="marketing")
 
     product_name = st.text_input(
         "What is the name of the product? \n\n", key="product_name", value="ZomZoo"
@@ -490,7 +518,7 @@ with tab3:
 
     with tab_image:
         st.write("Using Imagen - Text 2 image")
-        st.subheader("Generate image")
+        st.subheader("Generate image", anchor="imagen")
 
         image_prompt = "A real-estate luxury living room"
         image_prompt = st.text_area('Enter your text here...', image_prompt, )
@@ -517,10 +545,10 @@ with tab3:
 
     with tab_image_to_text:
         st.write("Using Imagen - image 2 text")
-        st.subheader("image decription")
+        st.subheader("image decription", anchor="imagedesc")
 
         image_2_describe_to_image = None
-        uploaded_image2t2i_file = st.file_uploader("Choose an image file", type= ["jpg", "jpeg"])
+        uploaded_image2t2i_file = st.file_uploader("Choose an image file", type= ["jpg", "jpeg", "png"])
 
         if uploaded_image2t2i_file is not None:
             # To read file as bytes:
@@ -531,17 +559,28 @@ with tab3:
             #image_2_describe = Image.from_bytes(bytes_data)
             print("######################################")
             #print(image_2_describe) # = "image/jpeg"
-            captions =  get_image_2_text_response(model=image2text_model, source_bytes=bytes_data)
-            st.write("Caption from imagen:")
-            st.write(captions)
+            if False:
+                captions =  get_image_2_text_response(model=image2text_model, source_bytes=bytes_data)
+                st.write("Caption from imagen:")
+                st.write(captions)
 
-            prompt = "Create a detailed prompt from the image"
+            prompt = "Create a detailed image description from the image in French"
 
             image_part = Part.from_data(bytes_data, mime_type="image/jpeg")
             response_gemini = get_gemini_pro_vision_response(
                 model=multimodal_model_pro, prompt_list=[image_part, prompt]
             )
             st.write("Caption from gemini:")
+            st.markdown(response_gemini)
+
+
+            prompt = "Create an image description to optimize SEO from the image"
+
+            image_part = Part.from_data(bytes_data, mime_type="image/jpeg")
+            response_gemini = get_gemini_pro_vision_response(
+                model=multimodal_model_pro, prompt_list=[image_part, prompt]
+            )
+            st.write("SEO description optimized from gemini:")
             st.markdown(response_gemini)
 
 
@@ -566,7 +605,7 @@ with tab3:
         #             st.text(image_prompt)
     with tab_image_to_text_to_image:
         st.write("Using Imagen - image 2 text 2 image :-)")
-        st.subheader("image description and generation")
+        st.subheader("image description and generation", anchor="imagendescgen")
 
         image_2_describe = None
         uploaded_image_to_text_to_image_file = st.file_uploader("Choose an image file", 
@@ -1205,12 +1244,80 @@ Create a short title in ENGLISH in one sentence based on this content.
     return podcast_title
 
 with tab6:
-    st.write("Audio & video - STT Chirp")
+    st.subheader("Audio & video - STT Chirp", anchor="STT")
+    #st.write("Audio & video - STT Chirp")
 
 
-    podcast_all, gemini_stt, stt, video  = st.tabs(
-        ["Podcast every-things", "Gemini as STT", "STT Chirp" , "video - youtube"]
+    stt_stream, podcast_all, gemini_stt, stt, video  = st.tabs(
+        ["STT Streaming","Podcast every-things", "Gemini as STT", "STT Chirp" , "video - youtube"]
     )
+
+
+
+    with stt_stream:
+        wav_audio_data = None
+        from st_audiorec import st_audiorec
+        wav_audio_data = st_audiorec() # tadaaaa! yes, that's it! :D
+
+        # from audio_recorder_streamlit import audio_recorder
+        # wav_audio_data_2 = audio_recorder()
+
+        # recorded_prompt = stt(speech=msgs_to_compare["user_audio"]).text
+        # if wav_audio_data:
+        #     st.audio(audio_bytes, format="audio/wav")
+
+        # import numpy as np
+        # from io import BytesIO
+        # import streamlit.components.v1 as components
+        # # get parent directory relative to current directory
+        # parent_dir = os.path.dirname(os.path.abspath(__file__))
+        # # Custom REACT-based component for recording client audio in browser
+        # build_dir = os.path.join(parent_dir, "frontend/build")
+        # # specify directory and initialize st_audiorec object functionality
+        # st_audiorec = components.declare_component("st_audiorec", path=build_dir)
+
+        # # Create an instance of the component: STREAMLIT AUDIO RECORDER
+        # raw_audio_data = st_audiorec()  # raw_audio_data: stores all the data returned from the streamlit frontend
+        # wav_bytes = None                # wav_bytes: contains the recorded audio in .WAV format after conversion
+
+        # # the frontend returns raw audio data in the form of arraybuffer
+        # # (this arraybuffer is derived from web-media API WAV-blob data)
+
+        # if isinstance(raw_audio_data, dict):  # retrieve audio data
+        #     with st.spinner('retrieving audio-recording...'):
+        #         ind, raw_audio_data = zip(*raw_audio_data['arr'].items())
+        #         ind = np.array(ind, dtype=int)  # convert to np array
+        #         raw_audio_data = np.array(raw_audio_data)  # convert to np array
+        #         sorted_ints = raw_audio_data[ind]
+        #         stream = BytesIO(b"".join([int(v).to_bytes(1, "big") for v in sorted_ints]))
+        #         transcribe_streaming(stream)
+        #         # wav_bytes contains audio data in byte format, ready to be processed further
+        #         wav_bytes = stream.read()
+        #         wav_audio_data  = wav_bytes
+
+        
+
+        # add some spacing and informative messages
+        col_info, col_space = st.columns([0.57, 0.43])
+        with col_info:
+            st.write('\n')  # add vertical spacer
+            st.write('\n')  # add vertical spacer
+            st.write('The .wav audio data, as received in the backend Python code,'
+                    ' will be displayed below this message as soon as it has'
+                    ' been processed. [This informative message is not part of'
+                    ' the audio recorder and can be removed easily] 🎈')
+
+        # if wav_audio_data_1 is not None:
+        #     wav_audio_data = wav_audio_data_1
+        # if wav_audio_data_2 is not None:
+        #     wav_audio_data = wav_audio_data_2            
+        if wav_audio_data is not None:
+            # display audio data as received on the Python side
+            col_playback, col_space = st.columns([0.58,0.42])
+            with col_playback:
+                st.audio(wav_audio_data, format='audio/wav')
+
+
 
     with podcast_all:
         st.markdown(
@@ -1428,6 +1535,8 @@ Example of valide SSML format:
             """Gemini as STT"""
         )
         language_code_gemini =  st.text_input("language_code_gemini", value="fr-FR", )
+        multimodal_model_name_gemini =  st.selectbox("multimodal_model_name_gemini",options=[config.GEMINI_MULTIMODAL_MODEL_NAME, "gemini-1.5-pro-001", "gemini-experimental","gemini-1.5-pro-preview-0409"],key= config.GEMINI_MULTIMODAL_MODEL_NAME)
+        #multimodal_model_name_gemini =  st.text_input("multimodal_model_name_gemini", value=config.GEMINI_MULTIMODAL_MODEL_NAME, )
 
 
         uploaded_sound_to_bucket = st.file_uploader("Choose a audio file", type=None)
@@ -1448,10 +1557,10 @@ Example of valide SSML format:
             from gemini import       generate_transcript_from_audio
             
             final_res= ""
-            with st.spinner("Generating STT using Gemini..."):
+            with st.spinner(f"Generating STT using Gemini model: {multimodal_model_name_gemini}..."):
                 audio = Part.from_uri(gcs_uri_input, mime_type="audio/x-m4a") 
 
-                results = generate_transcript_from_audio(audio, language=language_code_gemini)
+                results = generate_transcript_from_audio(audio, language=language_code_gemini, model=multimodal_model_name_gemini)
                 for result in results:
                     if result[0] is not None:
                         st.markdown(result[0])                    
@@ -1564,75 +1673,8 @@ Example of valide SSML format:
 
 
 
-####
-
-# Streamed response emulator
-def response_generator():
-
-    import langchainAgent as chat
-    
-    bot_response = chat.agent_chain.stream(prompt)
-    if bot_response:
-        yield bot_response
-    else:
-        return
-
-  
-
-if chatbot == True:
-    # Initialize chat history
-    if "messages" not in st.session_state:
-        st.session_state.messages = []
-
-    # Display chat messages from history on app rerun
-    for message in st.session_state.messages:
-        with st.chat_message(message["role"]):
-            st.markdown(message["content"])
-
-    # Accept user input
-    if prompt := st.chat_input("Comment puis-je vous aider ?"):
-        # Add user message to chat history
-        st.session_state.messages.append({"role": "user", "content": prompt})
-        # Display user message in chat message container
-        with st.chat_message("user"):
-            st.markdown(prompt)
-
-        # Display assistant response in chat message container
-        with st.chat_message("assistant"):
-            stream = response_generator()
-            try:
-                response = st.write_stream(stream)
-            except:
-                print()
-        try:
-        # Add assistant response to chat history        
-            st.session_state.messages.append({"role": "assistant", "content": response})
-        except:
-            print()
-
-    # # Initialize chat history
-    # if "messages" not in st.session_state:
-    #     st.session_state.messages = []
-
-    # # Display chat messages from history on app rerun
-    # for message in st.session_state.messages:
-    #     with st.chat_message(message["role"]):
-    #         st.markdown(message["content"])
-
-    # # React to user input
-    # if prompt := st.chat_input("What is up?"):
-    #     # Display user message in chat message container
-    #     st.chat_message("user").markdown(prompt)
-    #     # Add user message to chat history
-    #     st.session_state.messages.append({"role": "user", "content": prompt})
-
-    #     response = f"Echo: {prompt}"
-    #     # Display assistant response in chat message container
-    #     with st.chat_message("assistant"):
-    #         st.markdown(response)
-    #     # Add assistant response to chat history
-    #     st.session_state.messages.append({"role": "assistant", "content": response})
-
 
 from app_footer import footer
 footer(st)
+
+
